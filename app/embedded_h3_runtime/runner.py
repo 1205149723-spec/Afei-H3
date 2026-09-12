@@ -105,7 +105,7 @@ def _require_kijai_h3_contract(sage_receipt: Dict[str, Any]) -> Dict[str, Any]:
         "sageModulePathVerified": True,
         "sageDistributionPathVerified": True,
         "sageDistributionName": "sageattention",
-        "sm120Verified": True,
+        "currentDeviceArchitectureVerified": True,
     }
     mismatches = [
         key for key, value in required.items()
@@ -202,12 +202,8 @@ def _verified_kernel_backend_receipt(
             "source": hook.get("requestedSource") or hook.get("source"),
             "sourceCommit": hook.get("sourceCommit"),
             "sagePackageVersion": hook.get("sagePackageVersion"),
-            "cudaArchitecture": (
-                "sm120" if hook.get("sm120Verified") is True or "sm120" in {
-                    str(item).lower().replace("_", "")
-                    for item in (hook.get("cudaArchitectures") or [])
-                } else None
-            ),
+            "cudaArchitecturePolicy": "current_device_must_be_supported",
+            "cudaArchitecture": hook.get("currentDeviceArchitecture"),
             "requiredSageSymbols": hook.get("requiredSageSymbols"),
             "backend": hook.get("backend"),
             "patchedBlocks": hook.get("patchedBlocks"),

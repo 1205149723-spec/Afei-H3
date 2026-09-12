@@ -9,8 +9,10 @@ It never starts a ComfyUI server or executes a workflow.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 from email.parser import Parser
+import subprocess
 import sys
 import threading
 import types
@@ -33,7 +35,136 @@ _REQUIRED_SAGE_SYMBOLS = (
 )
 _MODULE: Optional[Any] = None
 _MODULE_ERROR: Optional[str] = None
+_KERNEL_SELF_TEST: Optional[Dict[str, Any]] = None
 _LOCK = threading.RLock()
+
+
+def _current_cuda_architecture() -> tuple[Optional[str], Optional[str]]:
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return None, "CUDA is unavailable"
+        major, minor = torch.cuda.get_device_capability()
+        return f"sm{major}{minor}", None
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+
+
+def _configure_vendor_sage_backend(module: Any, variant: str) -> Dict[str, Any]:
+    """Select one real Sage kernel implementation for KJ's H3 forward."""
+
+    if variant == "vendor_default":
+        return {"kernelVariant": variant, "vendorHelperOverride": False}
+
+    if variant == "public_fp16_cuda":
+        from sageattention import sageattn_qk_int8_pv_fp16_cuda
+
+        def stable_helper(qkv: list[Any], dtype: Any) -> Any:
+            q, k, v = qkv
+            qkv.clear()
+            out = sageattn_qk_int8_pv_fp16_cuda(q, k, v, tensor_layout="NHD", is_causal=False)
+            if out.dtype != dtype:
+                out = out.to(dtype)
+            return out
+
+        module._sageattn_int8_fp8_nhd = stable_helper
+        return {"kernelVariant": variant, "vendorHelperOverride": True}
+
+    if variant == "public_auto":
+        from sageattention import sageattn
+
+        def stable_helper(qkv: list[Any], dtype: Any) -> Any:
+            q, k, v = qkv
+            qkv.clear()
+            out = sageattn(q, k, v, tensor_layout="NHD", is_causal=False)
+            if out.dtype != dtype:
+                out = out.to(dtype)
+            return out
+
+        module._sageattn_int8_fp8_nhd = stable_helper
+        return {"kernelVariant": variant, "vendorHelperOverride": True}
+
+    raise RuntimeError(f"unknown Kijai Sage kernel variant: {variant}")
+
+
+def _kernel_candidates(current_architecture: Optional[str]) -> list[str]:
+    # Ada's FP8 path is known to be unstable in SageAttention 2.2 on real
+    # workloads. Prefer the validated FP16 CUDA path there. Other devices try
+    # KJ's architecture-specific implementation first, then public Sage APIs.
+    if current_architecture == "sm89":
+        return ["public_fp16_cuda", "vendor_default"]
+    return ["vendor_default", "public_auto", "public_fp16_cuda"]
+
+
+def _run_kijai_kernel_self_test(current_architecture: Optional[str]) -> Dict[str, Any]:
+    """Probe candidate kernels in isolated CUDA processes and cache the winner."""
+
+    global _KERNEL_SELF_TEST
+    with _LOCK:
+        if _KERNEL_SELF_TEST is not None:
+            return dict(_KERNEL_SELF_TEST)
+
+    script = r'''
+import json, os, torch
+from h3_kj_adapter import _configure_vendor_sage_backend, _load_vendor_module
+variant = os.environ["H3_KJ_TEST_VARIANT"]
+module = _load_vendor_module()
+config = _configure_vendor_sage_backend(module, variant)
+checks = []
+for dtype in (torch.float16, torch.bfloat16):
+    q = torch.randn((1, 512, 56, 128), device="cuda", dtype=dtype)
+    k = torch.randn_like(q)
+    v = torch.randn_like(q)
+    out = module._sageattn_int8_fp8_nhd([q, k, v], dtype)
+    torch.cuda.synchronize()
+    if out.shape != q.shape or not torch.isfinite(out.float()).all().item():
+        raise RuntimeError(f"invalid Sage output for {dtype}: shape={tuple(out.shape)}")
+    checks.append(str(dtype))
+print(json.dumps({"ok": True, **config, "dtypes": checks}))
+'''
+    attempts = []
+    for variant in _kernel_candidates(current_architecture):
+        env = os.environ.copy()
+        env["CUDA_LAUNCH_BLOCKING"] = "1"
+        env["H3_KJ_TEST_VARIANT"] = variant
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                env=env,
+            )
+        except Exception as exc:
+            attempts.append({"variant": variant, "ok": False, "error": f"{type(exc).__name__}: {exc}"})
+            continue
+        if result.returncode == 0:
+            try:
+                payload = json.loads(result.stdout.strip().splitlines()[-1])
+            except (json.JSONDecodeError, IndexError) as exc:
+                attempts.append({"variant": variant, "ok": False, "error": f"invalid self-test output: {exc}"})
+                continue
+            payload.update({"currentDeviceArchitecture": current_architecture, "attempts": attempts + [{"variant": variant, "ok": True}]})
+            with _LOCK:
+                _KERNEL_SELF_TEST = dict(payload)
+            return dict(payload)
+        attempts.append({
+            "variant": variant,
+            "ok": False,
+            "error": (result.stderr or result.stdout or f"exit {result.returncode}")[-4000:],
+        })
+
+    payload = {
+        "ok": False,
+        "kernelVariant": None,
+        "currentDeviceArchitecture": current_architecture,
+        "attempts": attempts,
+    }
+    with _LOCK:
+        _KERNEL_SELF_TEST = dict(payload)
+    return dict(payload)
 
 
 def _prefer_private_sage() -> bool:
@@ -121,9 +252,17 @@ def _inspect_sage_core_identity(sage_core: Any, root: Path = SAGE_PRIVATE_ROOT, 
     identity.update(_inspect_private_sage_distribution(sage_path, root, metadata_paths))
     architectures = sage_core.get_cuda_arch_versions() if symbols["get_cuda_arch_versions"] else []
     normalized = {str(item).lower().replace("_", "") for item in (architectures or [])}
+    current_architecture, current_architecture_error = _current_cuda_architecture()
+    kernel_self_test = _run_kijai_kernel_self_test(current_architecture) if current_architecture else {"ok": False, "kernelVariant": None, "attempts": []}
+    current_architecture_verified = kernel_self_test.get("ok") is True
     identity.update({
         "cudaArchitectures": architectures,
         "sm120Verified": bool({"sm120", "120"} & normalized),
+        "currentDeviceArchitecture": current_architecture,
+        "currentDeviceArchitectureVerified": current_architecture_verified,
+        "currentDeviceArchitectureError": current_architecture_error,
+        "kernelSelfTest": kernel_self_test,
+        "kernelVariant": kernel_self_test.get("kernelVariant"),
     })
     return identity
 
@@ -191,11 +330,14 @@ def inspect_h3_memory_efficient_sage() -> Dict[str, Any]:
         "vendorImport": False,
         "requiredSageSymbols": {name: False for name in _REQUIRED_SAGE_SYMBOLS},
         "requiredSagePackageVersion": "2.2.0",
-        "requiredCudaArchitecture": "sm120",
+        "requiredCudaArchitecture": "current_device",
         "sageModulePathVerified": False,
         "sageDistributionPathVerified": False,
         "sagePackageVersionVerified": False,
         "sm120Verified": False,
+        "currentDeviceArchitecture": None,
+        "currentDeviceArchitectureVerified": False,
+        "currentDeviceArchitectureError": None,
         "pathActivation": dict(_SAGE_ACTIVATION),
         "cudaArchitectures": None,
         "comfyKitchen": False,
@@ -247,7 +389,7 @@ def inspect_h3_memory_efficient_sage() -> Dict[str, Any]:
         and receipt["sageModulePathVerified"]
         and receipt["sageDistributionPathVerified"]
         and receipt["sagePackageVersionVerified"]
-        and receipt["sm120Verified"]
+        and receipt["currentDeviceArchitectureVerified"]
         and not missing
         and receipt["comfyKitchen"]
         and receipt["miniMaxH3Model"]
@@ -257,8 +399,10 @@ def inspect_h3_memory_efficient_sage() -> Dict[str, Any]:
             receipt["compatibilityFailure"] = "locked private SageAttention module path mismatch"
         elif not receipt["sagePackageVersionVerified"]:
             receipt["compatibilityFailure"] = "locked SageAttention package version mismatch"
-        elif not receipt["sm120Verified"]:
-            receipt["compatibilityFailure"] = "locked SageAttention sm120 capability missing"
+        elif not receipt["currentDeviceArchitectureVerified"]:
+            current_arch = receipt.get("currentDeviceArchitecture") or "unknown"
+            attempts = (receipt.get("kernelSelfTest") or {}).get("attempts") or []
+            receipt["compatibilityFailure"] = f"no validated Kijai/Sage kernel for current GPU architecture: {current_arch}; attempts={attempts}"
         elif missing:
             receipt["compatibilityFailure"] = "Kijai H3 Sage extension symbols missing: " + ", ".join(missing)
         else:
@@ -273,6 +417,8 @@ def apply_h3_memory_efficient_sage_patch(model_patcher: Any) -> tuple[Any, Dict[
     if not receipt["available"]:
         raise RuntimeError(str(receipt["compatibilityFailure"] or "KJ H3 Sage patch is unavailable"))
     module = _load_vendor_module()
+    kernel_variant = str(receipt.get("kernelVariant") or "vendor_default")
+    kernel_config = _configure_vendor_sage_backend(module, kernel_variant)
     clone = model_patcher.clone()
     diffusion_model = clone.get_model_object("diffusion_model")
     model_type = getattr(module, "_MiniMaxH3Model", None)
@@ -295,5 +441,6 @@ def apply_h3_memory_efficient_sage_patch(model_patcher: Any) -> tuple[Any, Dict[
         "allowCompile": False,
         "scope": "denoiser_only",
         "globalPatch": False,
+        **kernel_config,
     })
     return clone, receipt

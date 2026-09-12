@@ -379,10 +379,16 @@ function taskDisplaySettings(task) {
   const resolutionMismatch = Boolean(requestedSize && actualSize && requestedSize !== actualSize);
   const comparableRequestedKernel = comparableKernelId(requestedKernel);
   const comparableActualKernel = comparableKernelId(actualKernel);
-  const kernelMismatch = Boolean(comparableRequestedKernel && comparableActualKernel && comparableRequestedKernel !== comparableActualKernel);
-  const requestedKernelLabel = kernelNames[requestedKernel] || "未知内核";
+  const compatibilityFallback = Boolean(
+    receipt.compatibilityFallback
+    || receipt.kernelBackendReceipt?.compatibilityFallback
+    || receipt.fallback === true
+  );
+  const kernelChanged = Boolean(comparableRequestedKernel && comparableActualKernel && comparableRequestedKernel !== comparableActualKernel);
+  const kernelMismatch = kernelChanged && !compatibilityFallback;
+  const requestedKernelLabel = kernelNames[comparableRequestedKernel] || kernelNames[requestedKernel] || "未知内核";
   const actualKernelLabel = kernelNames[comparableActualKernel] || kernelNames[actualKernel] || "";
-  const displayedKernel = actualKernelLabel || requestedKernelLabel;
+  const displayedKernel = requestedKernel ? requestedKernelLabel : actualKernelLabel;
   const fpsMismatch = Number.isFinite(requestedFps) && Number.isFinite(actualFps) && requestedFps !== actualFps;
   return {
     mode: modeNames[modeId] || "等待确认",
@@ -393,7 +399,9 @@ function taskDisplaySettings(task) {
     fps: Number.isFinite(requestedFps) ? `${requestedFps} FPS${fpsMismatch ? ` → 实际 ${actualFps} FPS` : ""}` : (Number.isFinite(actualFps) ? `${actualFps} FPS` : "等待确认"),
     fpsMismatch,
     duration: Number.isFinite(duration) ? `${Number.isInteger(duration) ? duration : duration.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")} 秒` : "等待确认",
-    kernel: requestedKernel || actualKernel ? `${displayedKernel}${kernelMismatch ? ` → 实际 ${actualKernelLabel || "未知内核"}` : ""}` : "等待确认",
+    kernel: requestedKernel || actualKernel
+      ? `${displayedKernel}${kernelChanged ? ` → 实际 ${actualKernelLabel || "未知内核"}${compatibilityFallback ? "（兼容回退）" : ""}` : ""}`
+      : "等待确认",
     kernelMismatch,
     assets: references.length ? `${references.length} 个参考素材` : "无参考素材",
   };
