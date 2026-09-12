@@ -57,4 +57,32 @@ fi
 if [[ "${H3_INSTALL_ROOT_STARTER:-1}" == "1" && -d /root ]]; then
   install -m 0755 "$ROOT/start.sh" /root/start.sh
 fi
+
+# JupyterLab one-click fallback. End users can open JupyterLab and click
+# "阿飞 H3 工作台"; no AutoDL-SSH-Tools install or terminal use is required.
+if [[ -x /root/miniconda3/bin/python ]]; then
+  /root/miniconda3/bin/python -m pip install --no-cache-dir \
+    -i https://mirrors.aliyun.com/pypi/simple \
+    jupyter-server-proxy==4.5.0
+  mkdir -p /root/.jupyter
+  cat > /root/.jupyter/jupyter_server_config.py <<'PY'
+c = get_config()
+c.ServerProxy.servers = {
+    "afei-h3": {
+        "command": [
+            "bash",
+            "-lc",
+            "export H3_PORT={port}; export H3_HOST=127.0.0.1; exec bash /root/start.sh",
+        ],
+        "timeout": 180,
+        "launcher_entry": {
+            "enabled": True,
+            "title": "阿飞 H3 工作台",
+            "category": "Other",
+        },
+        "new_browser_tab": True,
+    }
+}
+PY
+fi
 echo "OK: HailuoH3 AutoDL Linux environment is ready."
