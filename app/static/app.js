@@ -1731,6 +1731,31 @@ function watchTask(task, { source = "selected" } = {}) {
     return;
   }
   $("generate").disabled = true;
+  pollTimer = setInterval(async () => {
+    if (!selectedTask?.id || selectedTask.id !== task.id) return;
+    try {
+      const response = await fetch(`api/tasks/${encodeURIComponent(task.id)}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const next = await response.json();
+      if (!next?.id || next.id !== task.id || selectedTask?.id !== task.id) return;
+      const completedNow = next.state === "completed" && selectedTask.state !== "completed";
+      selectedTask = next;
+      if (isActiveTask(next) || next.state === "completed") activeTask = next;
+      renderQueue(next, { advanceProgress: false });
+      renderResult(next);
+      if (completedNow && next.result?.outputAuthentic === true) {
+        selectedResultId = `generation:${next.id}`;
+        void refreshResultHistory();
+      }
+      if (terminalStates.has(next.state)) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+        $("generate").disabled = false;
+      }
+    } catch (_error) {
+      // SSE remains the fast path; this poll is the authoritative fallback.
+    }
+  }, 1000);
 }
 
 function connectTaskEvents() {
@@ -2063,6 +2088,7 @@ document.addEventListener("click", (event) => {
   }
 });
 setInterval(refreshTaskClock, 1000);
+setInterval(refreshHardwareStatus, 1500);
 connectTaskEvents();
 
 function installStatusPanelAlignment() {

@@ -66,7 +66,7 @@ class HardwareStatusMonitor:
         self._lock = threading.Lock()
         self._cached: Optional[Dict[str, Any]] = None
         self._cached_at = 0.0
-        self._cpu_previous: Optional[tuple[int, int, int]] = None
+        self._cpu_previous: Optional[tuple[int, ...]] = None
 
     @staticmethod
     def _unavailable(reason: str) -> Dict[str, Any]:
@@ -74,7 +74,41 @@ class HardwareStatusMonitor:
 
     def _cpu(self) -> Dict[str, Any]:
         if os.name != "nt":
-            return self._unavailable("windows_system_times_unavailable")
+            try:
+                cpu_max = Path("/sys/fs/cgroup/cpu.max").read_text(encoding="utf-8").strip().split()
+                if len(cpu_max) != 2 or cpu_max[1] == "0":
+                    return self._unavailable("cgroup_cpu_max_schema_unavailable")
+                quota_text, period_text = cpu_max
+                period = int(period_text)
+                quota_cores = None if quota_text == "max" else float(int(quota_text)) / float(period)
+                cpu_stat = {}
+                for line in Path("/sys/fs/cgroup/cpu.stat").read_text(encoding="utf-8").splitlines():
+                    key, _, raw = line.partition(" ")
+                    if raw:
+                        cpu_stat[key] = int(raw.strip())
+                usage_usec = cpu_stat.get("usage_usec")
+                if usage_usec is None:
+                    return self._unavailable("cgroup_cpu_stat_schema_unavailable")
+                effective_cores = quota_cores or float(os.cpu_count() or 1)
+                logical_cores = max(1, int(round(effective_cores)))
+                now_usec = time.monotonic_ns() // 1000
+                current = (int(usage_usec), int(now_usec), logical_cores)
+                previous = self._cpu_previous
+                self._cpu_previous = current
+                if previous is None or len(previous) != 3:
+                    return {"available": False, "reason": "first_sample_pending", "logicalCores": logical_cores}
+                usage_delta = int(usage_usec) - previous[0]
+                elapsed_usec = now_usec - previous[1]
+                if elapsed_usec <= 0:
+                    return self._unavailable("cpu_interval_unavailable")
+                load = usage_delta * 100.0 / (elapsed_usec * effective_cores)
+                return {
+                    "available": True,
+                    "loadPercent": round(max(0.0, min(100.0, load)), 1),
+                    "logicalCores": logical_cores,
+                }
+            except (OSError, ValueError, IndexError, ZeroDivisionError):
+                return self._unavailable("cgroup_cpu_unavailable")
 
         class FileTime(ctypes.Structure):
             _fields_ = [("low", ctypes.c_uint32), ("high", ctypes.c_uint32)]
@@ -97,7 +131,25 @@ class HardwareStatusMonitor:
     @staticmethod
     def _memory() -> Dict[str, Any]:
         if os.name != "nt":
-            return HardwareStatusMonitor._unavailable("windows_memory_status_unavailable")
+            try:
+                limit_text = Path("/sys/fs/cgroup/memory.max").read_text(encoding="utf-8").strip()
+                current_text = Path("/sys/fs/cgroup/memory.current").read_text(encoding="utf-8").strip()
+                if limit_text == "max":
+                    return HardwareStatusMonitor._unavailable("cgroup_memory_unlimited")
+                total = int(limit_text)
+                used = max(0, int(current_text))
+                available = max(0, total - used)
+                if total <= 0:
+                    return HardwareStatusMonitor._unavailable("cgroup_memory_schema_unavailable")
+                return {
+                    "available": True,
+                    "usedGiB": round(used / (1024 ** 3), 2),
+                    "totalGiB": round(total / (1024 ** 3), 2),
+                    "availableGiB": round(available / (1024 ** 3), 2),
+                    "usedPercent": round(used * 100.0 / total, 1),
+                }
+            except (OSError, ValueError):
+                return HardwareStatusMonitor._unavailable("cgroup_memory_unavailable")
 
         class MemoryStatus(ctypes.Structure):
             _fields_ = [("length", ctypes.c_uint32), ("memoryLoad", ctypes.c_uint32), ("totalPhys", ctypes.c_uint64), ("availPhys", ctypes.c_uint64), ("totalPageFile", ctypes.c_uint64), ("availPageFile", ctypes.c_uint64), ("totalVirtual", ctypes.c_uint64), ("availVirtual", ctypes.c_uint64), ("availExtendedVirtual", ctypes.c_uint64)]
