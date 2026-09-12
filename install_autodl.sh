@@ -66,5 +66,9 @@ if [[ -x /root/miniconda3/bin/python ]]; then
     -i https://mirrors.aliyun.com/pypi/simple \
     jupyter-server-proxy==4.5.0
   /root/miniconda3/bin/python -m pip install --no-cache-dir "$ROOT/jupyter_launcher"
+  mkdir -p /root/miniconda3/etc/jupyter/jupyter_server_config.d
+  cat > /root/miniconda3/etc/jupyter/jupyter_server_config.d/afei-h3-proxy.json <<'JSON'
+{"ServerApp":{"jpserver_extensions":{"afei_h3_proxy":true}}}
+JSON
 fi
 echo "OK: HailuoH3 AutoDL Linux environment is ready."

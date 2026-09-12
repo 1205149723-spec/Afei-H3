@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "afei-h3-jupyter-launcher"
-version = "0.1.0"
-description = "Jupyter Server Proxy launcher for Afei H3"
+version = "0.2.0"
+description = "Protected Jupyter gateway and launcher for Afei H3"
 requires-python = ">=3.10"
 
 [project.entry-points."jupyter_serverproxy_servers"]
