@@ -152,11 +152,15 @@ def discover_project_model_files(project_root: Path) -> Dict[str, Path]:
     discovered: Dict[str, Path] = {}
     for component, filename in MODEL_FILES.items():
         candidate = root / "models" / filename
-        if not candidate.is_file():
+        if candidate.is_file():
+            discovered[component] = candidate.resolve()
+            continue
+        # FL2VA/REF2VA have mutually exclusive quantized variants.  Do not
+        # require the legacy INT8 copy when this package is running W4A8.
+        if component not in MODEL_FILES_W4A8:
             raise H3RuntimeError(f"缺少 H3 模型文件：{filename}")
-        discovered[component] = candidate.resolve()
-    
-    # W4A8 模型是可选的，不强制要求
+
+    # Discover W4A8 primary-model variants independently.
     for component in ["FL2VA", "REF2VA"]:
         if component in MODEL_FILES_W4A8:
             w4a8_candidate = root / "models" / MODEL_FILES_W4A8[component]
@@ -592,8 +596,10 @@ class EmbeddedH3Runtime:
                 raise H3RuntimeError(f"W4A8 模型未找到：{MODEL_FILES_W4A8[name]}")
             path = self._model_file_paths[lookup_key]
         else:
+            if name not in self._model_file_paths:
+                raise H3RuntimeError(f"INT8 模型未找到：{MODEL_FILES[name]}")
             path = self._model_file_paths[name]
-        
+
         if path.suffix.lower() != ".safetensors":
             raise H3RuntimeError(f"unexpected model extension: {path}")
         if name not in self._model_identity_receipts and model_quant == "int8":
