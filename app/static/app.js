@@ -6,7 +6,7 @@ const COMPOSER_SESSION_STORAGE_KEY = "h3-local-ui-composer-session-v1";
 const SELECTED_TASK_STORAGE_KEY = "h3-local-ui-selected-task-v1";
 const DRAFT_FIELD_IDS = ["prompt", "mode", "duration", "ratio", "preset", "fps", "seed", "guidance", "role", "reference-policy", "stage1-steps", "stage2-steps", "acceleration-mode", "postprocess-1080p"];
 // The selected task drives the execution/result panels. The hardware panel
-// receives its own active task from /api/hardware-status and must never reuse
+// receives its own active task from api/hardware-status and must never reuse
 // this historical selection.
 let selectedTask = null;
 let activeTask = null;
@@ -501,7 +501,7 @@ function installExecutionMode() {
 
 async function refreshBackendStatus() {
   try {
-    const response = await fetch("/api/backend/health");
+    const response = await fetch("api/backend/health");
     const data = await response.json();
     document.querySelector(".status-pill").textContent = data.online ? `● 独立 H3 后端 ${data.torch || "online"}` : "● 后端 offline";
   } catch (_error) {
@@ -751,7 +751,7 @@ function hydrateComposerFromTask(task) {
 async function fetchTaskDetail(task) {
   if (!task || !task.id) return task;
   try {
-    const response = await fetch("/api/tasks/" + encodeURIComponent(task.id));
+    const response = await fetch("api/tasks/" + encodeURIComponent(task.id));
     return response.ok ? await response.json() : task;
   } catch (_error) {
     return task;
@@ -919,7 +919,7 @@ const nvidiaVsrTasks = new Map();
 const nvidiaVsrPollers = new Map();
 function nvidiaVsrPreviewUrl(task) {
   const output = String(task?.outputPath || "").replace(/^output\//, "");
-  return output ? `/api/output/${output.split("/").map(encodeURIComponent).join("/")}` : "";
+  return output ? `api/output/${output.split("/").map(encodeURIComponent).join("/")}` : "";
 }
 function renderNvidiaVsrStatus(sourceTask) {
   const result = $("result");
@@ -949,10 +949,10 @@ function renderNvidiaVsrStatus(sourceTask) {
 }
 async function startNvidiaVsr(sourceTask) {
   if (!sourceTask?.postprocess1080p || sourceTask.state !== "completed" || sourceTask.result?.outputAuthentic !== true || nvidiaVsrTasks.has(sourceTask.id)) return;
-  const response = await fetch("/api/nvidia-vsr/tasks", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({sourceTaskId:sourceTask.id})});
+  const response = await fetch("api/nvidia-vsr/tasks", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({sourceTaskId:sourceTask.id})});
   const task = await response.json(); if (!response.ok) throw new Error(task.error || "NVIDIA VSR任务创建失败");
   nvidiaVsrTasks.set(sourceTask.id, task); renderNvidiaVsrStatus(sourceTask);
-  const poll = setInterval(async () => { const r = await fetch(`/api/nvidia-vsr/tasks/${encodeURIComponent(task.id)}`); if (!r.ok) return; const next = await r.json(); nvidiaVsrTasks.set(sourceTask.id, next); renderNvidiaVsrStatus(sourceTask); if (["completed","failed","cancelled"].includes(next.state)) { clearInterval(poll); nvidiaVsrPollers.delete(sourceTask.id); } }, 1000);
+  const poll = setInterval(async () => { const r = await fetch(`api/nvidia-vsr/tasks/${encodeURIComponent(task.id)}`); if (!r.ok) return; const next = await r.json(); nvidiaVsrTasks.set(sourceTask.id, next); renderNvidiaVsrStatus(sourceTask); if (["completed","failed","cancelled"].includes(next.state)) { clearInterval(poll); nvidiaVsrPollers.delete(sourceTask.id); } }, 1000);
   nvidiaVsrPollers.set(sourceTask.id, poll);
 }
 
@@ -973,7 +973,7 @@ function renderCompiled(compiled, taskId = "preview") {
 async function compile() {
   setError("");
   const requestPayload = payload();
-  const response = await fetch("/api/compile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestPayload) });
+  const response = await fetch("api/compile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestPayload) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "参数编译失败");
   renderCompiled(data.compiled);
@@ -1120,7 +1120,7 @@ function renderResult(task) {
     ? `<p class="hint">当前查看历史任务 ${escapeHtml(task.id)}；实时硬件状态属于活动任务 ${escapeHtml(activeTask.id)}。</p>`
     : "";
   const outputPath = taskOutputPath(task);
-  const previewUrl = `/api/output/${encodeURIComponent(task.id)}/h3_result.mp4`;
+  const previewUrl = `api/output/${encodeURIComponent(task.id)}/h3_result.mp4`;
   const previewKey = `${task.id}:${previewUrl}`;
   const resultContainer = $("result");
   const terminalRenderKey = `${task.id}:${state}:${error || ""}:${result.failedStage || ""}`;
@@ -1216,7 +1216,7 @@ const FLASHVSR_AVAILABLE = false;
 function enhancementPreviewUrl(task) {
   const parentId = task?.parentTaskId || task?.sourceTaskId || task?.id;
   const file = task?.outputFile || String(task?.outputPath || "").split("/").pop();
-  return `/api/output/${encodeURIComponent(parentId)}/${encodeURIComponent(file)}`;
+  return `api/output/${encodeURIComponent(parentId)}/${encodeURIComponent(file)}`;
 }
 
 function latestEnhancementForSource(tasks, sourceTaskId) {
@@ -1239,9 +1239,9 @@ function resultHistoryLabel(item) {
 async function refreshResultHistory() {
   if (resultHistoryRequest) return resultHistoryRequest;
   resultHistoryRequest = Promise.all([
-    fetch("/api/tasks").then((response) => response.ok ? response.json() : Promise.reject(new Error("task history unavailable"))),
-    fetch("/api/postprocess/tasks").then((response) => response.ok ? response.json() : Promise.reject(new Error("postprocess history unavailable"))),
-    fetch("/api/nvidia-vsr/tasks").then((response) => response.ok ? response.json() : Promise.reject(new Error("nvidia vsr history unavailable"))),
+    fetch("api/tasks").then((response) => response.ok ? response.json() : Promise.reject(new Error("task history unavailable"))),
+    fetch("api/postprocess/tasks").then((response) => response.ok ? response.json() : Promise.reject(new Error("postprocess history unavailable"))),
+    fetch("api/nvidia-vsr/tasks").then((response) => response.ok ? response.json() : Promise.reject(new Error("nvidia vsr history unavailable"))),
   ])
     .then(([taskPayload, postprocessPayload, nvidiaVsrPayload]) => {
       const taskResults = (Array.isArray(taskPayload?.tasks) ? taskPayload.tasks : taskPayload || [])
@@ -1255,7 +1255,7 @@ async function refreshResultHistory() {
             sourceTaskId: task.id,
             createdAt: task.completedAt || task.createdAt,
             resolution: receipt.effectiveResolution || {},
-            url: `/api/output/${encodeURIComponent(task.id)}/h3_result.mp4`,
+            url: `api/output/${encodeURIComponent(task.id)}/h3_result.mp4`,
             outputAuthentic: true,
           };
         });
@@ -1299,7 +1299,7 @@ function resultHistoryForTask(sourceTask) {
     sourceTaskId: sourceTask.id,
     createdAt: sourceTask.completedAt || sourceTask.createdAt,
     resolution: { id: resolution.preset, label: resolution.preset, width: resolution.width, height: resolution.height },
-    url: `/api/output/${encodeURIComponent(sourceTask.id)}/h3_result.mp4`,
+    url: `api/output/${encodeURIComponent(sourceTask.id)}/h3_result.mp4`,
     outputAuthentic: true,
   }, ...resultHistory];
 }
@@ -1359,7 +1359,7 @@ async function cancelEnhancement(sourceTask, post, button) {
   button.disabled = true;
   button.textContent = "正在取消";
   try {
-    const response = await fetch(`/api/postprocess/tasks/${encodeURIComponent(post.id)}/cancel`, { method: "POST" });
+    const response = await fetch(`api/postprocess/tasks/${encodeURIComponent(post.id)}/cancel`, { method: "POST" });
     const task = await response.json();
     if (!response.ok) throw new Error(task.error || "取消修复失败");
     selectedEnhancement = task;
@@ -1377,7 +1377,7 @@ async function createEnhancement(sourceTask, target, selectedResult) {
   const buttons = [...document.querySelectorAll("#flashvsr-enhance [data-repair-target]")];
   buttons.forEach((button) => { button.disabled = true; });
   try {
-    const response = await fetch(`/api/tasks/${encodeURIComponent(sourceTask.id)}/enhance`, {
+    const response = await fetch(`api/tasks/${encodeURIComponent(sourceTask.id)}/enhance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ targetResolution: target, sourceResultId: selectedResult?.id || `generation:${sourceTask.id}` }),
@@ -1397,7 +1397,7 @@ function watchEnhancement(sourceTask, taskId) {
   clearInterval(enhancementPollTimer);
   renderEnhancementCard(sourceTask);
   enhancementPollTimer = setInterval(async () => {
-    const response = await fetch(`/api/postprocess/tasks/${encodeURIComponent(taskId)}`);
+    const response = await fetch(`api/postprocess/tasks/${encodeURIComponent(taskId)}`);
     if (!response.ok) return;
     selectedEnhancement = await response.json();
     enhancementTasks = [selectedEnhancement, ...enhancementTasks.filter((item) => item.id !== selectedEnhancement.id)];
@@ -1626,7 +1626,7 @@ async function refreshHardwareStatus() {
   if (hardwareRequestInFlight) return;
   hardwareRequestInFlight = true;
   try {
-    const response = await fetch("/api/hardware-status");
+    const response = await fetch("api/hardware-status");
     if (!response.ok) throw new Error(response.status === 404 ? "hardware_endpoint_missing" : `hardware_status_${response.status}`);
     const status = await response.json();
     lastHardwareStatus = status;
@@ -1658,7 +1658,7 @@ async function refreshHardwareStatus() {
 async function loadHistory() {
   try {
     await refreshResultHistory();
-    const response = await fetch("/api/tasks");
+    const response = await fetch("api/tasks");
     if (!response.ok) return;
     const taskResponse = await response.json();
     const tasks = Array.isArray(taskResponse) ? taskResponse : (taskResponse.tasks || []);
@@ -1679,7 +1679,7 @@ async function loadHistory() {
 async function refreshTaskSelection() {
   try {
     await refreshResultHistory();
-    const response = await fetch("/api/tasks");
+    const response = await fetch("api/tasks");
     if (!response.ok) return;
     const taskResponse = await response.json();
     const tasks = Array.isArray(taskResponse) ? taskResponse : (taskResponse.tasks || []);
@@ -1736,7 +1736,7 @@ function watchTask(task, { source = "selected" } = {}) {
 function connectTaskEvents() {
   if (typeof EventSource === "undefined") return;
   taskEventSource?.close();
-  taskEventSource = new EventSource("/api/events");
+  taskEventSource = new EventSource("api/events");
   taskEventSource.addEventListener("task", (event) => {
     try {
       const next = JSON.parse(event.data);
@@ -1785,7 +1785,7 @@ async function createTask() {
     if (mode.value !== requestPayload.mode) {
       throw new Error("生成模式状态不同步，任务未提交，请重新选择生成模式后再试。");
     }
-    const response = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestPayload) });
+    const response = await fetch("api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestPayload) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "任务创建失败");
     watchTask(data, { source: "active" });
@@ -1800,7 +1800,7 @@ async function cancelTaskLegacy() {
   const button = $("cancel-task");
   if (button) { button.disabled = true; button.textContent = "正在停止"; }
   try {
-    const response = await fetch(`/api/tasks/${selectedTask.id}/cancel`, { method: "POST" });
+    const response = await fetch(`api/tasks/${selectedTask.id}/cancel`, { method: "POST" });
     const task = await response.json();
     if (!response.ok) throw new Error(task.error || "停止生成失败");
     renderQueue(task); renderResult(task);
@@ -1820,7 +1820,7 @@ async function cancelTask() {
   cancelPendingTaskIds.add(taskId);
   renderQueue(selectedTask);
   try {
-    const response = await fetch(`/api/tasks/${taskId}/cancel`, { method: "POST" });
+    const response = await fetch(`api/tasks/${taskId}/cancel`, { method: "POST" });
     const task = await response.json();
     if (!response.ok) throw new Error(task.error || "停止生成失败");
     renderQueue(task);
@@ -1853,7 +1853,7 @@ $("file-input").addEventListener("change", async (event) => {
     try {
       const form = new FormData();
       form.append("file", file, file.name);
-      const upload = await fetch("/api/assets", { method: "POST", body: form });
+      const upload = await fetch("api/assets", { method: "POST", body: form });
       const data = await upload.json();
       if (!upload.ok) throw new Error(data.error || "资产上传到 input 失败");
       const previewUrl = kind === "image" ? URL.createObjectURL(file) : null;

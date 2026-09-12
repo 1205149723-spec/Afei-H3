@@ -12,7 +12,7 @@ Linux/AutoDL publication of the HailuoH3 8775 local video generator.
 
 ## Quick start on AutoDL
 
-For the published image: create an instance from the Afei-H3 image, wait for startup, then open AutoDL Custom Service port `6006`. No Git clone, environment install, or model download is required for end users.
+For the published image: create an instance from the Afei-H3 image and wait for startup. End users can either open the exposed H3 service directly, or open JupyterLab and click **“阿飞 H3 工作台”**. No AutoDL-SSH-Tools install, terminal command, Git clone, environment install, or model download is required.
 
 The service listens on `0.0.0.0:6006` by default. `/root/start.sh` is the one-command fallback launcher. The saved image also includes a JupyterLab launcher named `阿飞 H3 工作台`; it opens H3 through Jupyter's own web proxy, so end users do not need AutoDL-SSH-Tools.
 

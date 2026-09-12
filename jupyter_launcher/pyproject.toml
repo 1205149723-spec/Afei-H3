@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "afei-h3-jupyter-launcher"
+version = "0.1.0"
+description = "Jupyter Server Proxy launcher for Afei H3"
+requires-python = ">=3.10"
+
+[project.entry-points."jupyter_serverproxy_servers"]
+afei-h3 = "afei_h3_proxy:setup_afei_h3"
+
+[tool.setuptools]
+py-modules = ["afei_h3_proxy"]
