@@ -54,4 +54,7 @@ else
 fi
 
 "$PY" scripts/verify_environment.py
+if [[ "${H3_INSTALL_ROOT_STARTER:-1}" == "1" && -d /root ]]; then
+  install -m 0755 "$ROOT/start.sh" /root/start.sh
+fi
 echo "OK: HailuoH3 AutoDL Linux environment is ready."
