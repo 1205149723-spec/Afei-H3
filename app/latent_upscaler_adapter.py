@@ -17,7 +17,7 @@ WEIGHT_RELATIVE_PATH = Path("models") / "latent_upscaler" / "minimax_h3_latent_u
 VENDOR_COMMIT = "d7c01b9011f2e8439493f6c02c29995a27df276f"
 VENDOR_RELATIVE_PATH = Path("vendor") / "Comfyui_Minimax_h3_latent_Upscaler"
 VENDOR_MODULE_RELATIVE_PATH = Path("nodes") / "minimax_h3_latent_upscaler_3d.py"
-VENDOR_MODULE_SHA256 = "1b727ff696b9bf4f45fb79229eb2aae26e46d64365bed01c76a8670b273b746c"
+VENDOR_MODULE_SHA256 = "744063b43e0f3eec23e2485cb7c65503069946ca9690906ecb548d7515cb89e2"
 LATENTS_MEAN = (
     0.858090341091156, -0.9606591463088989, 1.0661640167236328, -0.5090325474739075,
     -0.2727581858634949, -1.3675414323806763, -0.2553254961967468, -0.26907554268836975,
@@ -53,6 +53,12 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _source_sha256(path: Path) -> str:
+    """Hash Python source canonically across Windows CRLF and Linux LF checkouts."""
+    data = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(data).hexdigest()
+
+
 def _verified_vendor_commit(vendor: Path) -> str:
     """Verify the pinned vendor source without requiring a Git executable.
 
@@ -64,7 +70,7 @@ def _verified_vendor_commit(vendor: Path) -> str:
     module_path = vendor / VENDOR_MODULE_RELATIVE_PATH
     if not module_path.is_file():
         raise LatentUpscalerError(f"latent upscaler vendor module missing: {module_path}")
-    actual = _sha256(module_path)
+    actual = _source_sha256(module_path)
     if actual != VENDOR_MODULE_SHA256:
         raise LatentUpscalerError(
             f"vendor module SHA256 mismatch: {actual} != {VENDOR_MODULE_SHA256}"
