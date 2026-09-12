@@ -1,0 +1,30 @@
+{
+    "schemaVersion":  "h3-memory-policy-v1",
+    "enforcementEnabled":  false,
+    "rolloutMode":  "observe_only",
+    "normalPatcher":  "dynamic_model_patcher",
+    "emergencyPatcher":  "dynamic_controlled_offload",
+    "initialGuardBytes":  536870912,
+    "workspaceMultiplier":  "disabled_until_calibrated",
+    "guardSource":  "project_calibration",
+    "officialValues":  {
+                           "comfyWindowsReserve":  "runtime_default",
+                           "dynamicVramHeadroom":  "runtime_default"
+                       },
+    "historyLookup":  "disabled",
+    "profile":  "rtx5090_h3_v1",
+    "staticRules":  [],
+    "decisionSources":  [
+                            "static_local_experience",
+                            "official_capacity_fallback"
+                        ],
+    "grayAreaPolicy":  "unknown_canvas_or_duration_uses_official_capacity_fallback",
+    "envelopes":  {
+                      "safe":  [
+
+                               ],
+                      "danger":  [
+
+                                 ]
+                  }
+}

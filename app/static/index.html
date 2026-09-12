@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>阿飞 MiniMax H3 · 8775 二采</title>
+  <link rel="stylesheet" href="/styles.css?v=20260831-receipt-progress-v1">
+</head>
+<body>
+  <div class="viewport-stage">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">LOCAL H3 WORKBENCH</p>
+      <h1>阿飞 MiniMax H3 <span>8775 二采</span></h1>
+    </div>
+    <div class="status-pill"><i></i> 正式 H3 后端准备中</div>
+  </header>
+
+  <main class="layout">
+    <section class="workspace panel">
+      <div class="section-heading create-heading">
+        <div><p class="eyebrow">01 · CREATE</p><h2>新建视频任务</h2></div>
+        <div class="create-heading-actions"><span class="badge">H3 / 8775 二采</span></div>
+      </div>
+
+      <label class="field-label" for="prompt">提示词</label>
+      <textarea id="prompt" rows="4" placeholder="描述画面、动作、镜头和氛围……">一列夜间列车穿过雨后的霓虹城市，镜头缓慢向前推进</textarea>
+      <div class="section-heading compact reference-heading"><div><p class="eyebrow">REFERENCES</p><div class="reference-title-row"><h3>参考素材</h3></div></div><span id="ref-count" class="muted">0 / 12</span></div>
+      <div class="reference-workspace">
+        <div id="reference-tray" class="reference-tray" aria-label="参考素材上传和预览区域">
+          <label id="reference-drop" class="dropzone reference-upload-tile" for="file-input"><input id="file-input" type="file" accept="image/*,video/*,audio/*" multiple><span class="upload-icon">＋</span><strong>添加素材</strong></label>
+          <div id="reference-list" class="reference-list"></div>
+        </div>
+      </div>
+      <p id="reference-capacity" class="hint reference-capacity">图片 0/9 · 视频 0/3 · 音频 0/3；视频内含原声不另占上传名额。</p>
+
+      <div class="section-heading compact"><div><p class="eyebrow">BASIC SETTINGS</p><h3>基础设置</h3></div></div>
+      <div class="field-grid three-grid basic-settings-grid">
+        <div class="mode-field"><label class="field-label" for="mode">生成模式</label><select id="mode">
+          <option value="R2V" selected>参考模式</option>
+          <option value="T2V">文生视频</option>
+          <option value="I2V">图生视频</option>
+          <option value="FIRST_LAST_FRAME">首尾帧</option>
+        </select></div>
+        <div><label class="field-label" for="ratio">画幅比例</label><select id="ratio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:3</option><option>3:4</option></select></div>
+        <div><label class="field-label" for="preset">分辨率</label><select id="preset"><option value="768p">768p</option><option value="720p">720p</option><option value="640p">640p</option><option value="576p" selected>576p</option></select></div>
+        <input id="fps" type="hidden" value="24">
+        <div><label class="field-label" for="duration">时长（秒）</label><select id="duration"><option value="4">4 秒</option><option value="5">5 秒</option><option value="6">6 秒</option><option value="7">7 秒</option><option value="8">8 秒</option><option value="9">9 秒</option><option value="10" selected>10 秒</option><option value="11">11 秒</option><option value="12">12 秒</option><option value="13">13 秒</option><option value="14">14 秒</option><option value="15">15 秒</option></select></div>
+        <div><label class="field-label" for="stage1-steps">一采步数</label><select id="stage1-steps"><option value="20">20 步</option><option value="30">30 步</option><option value="40" selected>40 步</option><option value="50">50 步</option><option value="60">60 步</option></select></div>
+        <div><label class="field-label" for="stage2-steps">二采步数</label><select id="stage2-steps"><option value="3">3 步</option><option value="5" selected>5 步</option><option value="7">7 步</option><option value="10">10 步</option></select></div>
+        <input id="acceleration-mode" type="hidden" value="kijai_fast">
+      </div>
+      <label class="postprocess-toggle" for="postprocess-1080p">
+        <input id="postprocess-1080p" type="checkbox" disabled>
+        <span class="postprocess-toggle-track" aria-hidden="true"><span></span></span>
+        <span class="postprocess-toggle-copy"><strong>成片后放大到1080P</strong><small>AutoDL Linux 版暂不启用 Windows NVIDIA VSR 后处理</small></span>
+      </label>
+        <div id="generation-actions" class="generation-actions" aria-label="生成操作">
+          <button id="generate" class="button primary"><span class="generate-label">开始生成</span></button>
+        </div>
+
+      <div id="error" class="error" hidden></div>
+
+      <details class="advanced" hidden><summary>高级设置 <span>默认，无需修改。可设置随机种子、提示词强度与参考角色。</span></summary>
+        <div class="field-grid three-grid advanced-fields">
+          <div><label class="field-label" for="seed">随机种子</label><input id="seed" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="自动"></div>
+          <div><label class="field-label" for="guidance">提示词强度</label><input id="guidance" type="number" value="7" min="1" max="20" step="0.5"></div>
+          <div><label class="field-label" for="role">参考角色标签</label><select id="role"><option value="general">通用参考</option><option value="character">角色</option><option value="style">风格</option><option value="motion">动作</option></select></div>
+        </div>
+      
+      </details>
+    </section>
+
+    <aside class="side-column">
+      <section class="panel queue-panel"><div class="section-heading"><div><p class="eyebrow">02 · EXECUTION</p><h2>执行进度</h2></div></div><div id="queue"><div class="queue-empty" role="status" aria-live="polite"><strong>暂无执行中的任务</strong><span>提交生成后，这里会实时显示当前阶段、采样步数、进度和耗时。</span></div></div></section>
+      <section class="panel result-panel"><div class="section-heading"><div><p class="eyebrow">04 · RESULT</p><h2>结果预览</h2></div></div><div id="result" class="empty-state"><div class="empty-orb">◌</div><strong>还没有生成结果</strong><span>参数预览或真实生成的进度与结果会显示在这里。</span></div></section>
+      <section class="panel hardware-panel"><div class="section-heading"><div><p class="eyebrow">03 · SYSTEM</p><h2>实时硬件状态</h2></div><span id="hardware-service" class="hardware-connection" role="status"><i aria-hidden="true"></i><span>正在连接</span></span></div><div id="hardware-status" class="hardware-status" aria-live="polite"><div class="hardware-card"><small>GPU</small><strong data-hw-gpu-temperature>连接中…</strong><span data-hw-gpu-load>核心负载：等待服务</span><div class="hardware-bar"><i data-hw-gpu-load-bar></i></div><span data-hw-gpu-memory>显存：等待服务</span><span data-hw-gpu-power>功耗：等待服务</span><span data-hw-gpu-extra>风扇/编解码：等待服务</span></div><div class="hardware-card"><small>CPU</small><strong data-hw-cpu-load>连接中…</strong><span data-hw-cpu-cores>逻辑核心：等待服务</span><div class="hardware-bar"><i data-hw-cpu-load-bar></i></div><span data-hw-worker>H3 worker：等待服务</span></div><div class="hardware-card"><small>内存</small><strong data-hw-memory-used>连接中…</strong><span data-hw-memory-available>可用：等待服务</span><div class="hardware-bar"><i data-hw-memory-bar></i></div><span data-hw-memory-percent>等待服务</span></div><div class="hardware-card"><small>运行状态</small><strong data-hw-runtime>正在连接</strong><span data-hw-runtime-task>活动任务：等待服务</span><span data-hw-stage>当前阶段：等待服务</span><span data-hw-cache>最后更新：尚无数据</span></div></div></section>
+    </aside>
+  </main>
+  <footer><span>H3 Local UI · 8775 二采</span><span>FL2VA / REF2VA 互斥路由 · 独立直连推理</span></footer>
+  </div>
+  <script src="/app.js?v=20260831-receipt-progress-v1"></script>
+</body>
+</html>

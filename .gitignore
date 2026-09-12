@@ -1,0 +1,10 @@
+.venv/
+models/*
+!models/README.md
+input/*
+output/*
+temp/*
+cache/*
+__pycache__/
+*.pyc
+.env
