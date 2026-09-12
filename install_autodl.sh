@@ -33,7 +33,7 @@ PY="$ROOT/.venv/bin/python"
 "$PY" -m pip install --no-cache-dir -r requirements-linux.txt
 
 SAGE_TARGET="$ROOT/runtime/python_packages/sageattention-2.2.0-cu130-torch211-py312-linux"
-SAGE_WHEEL="$ROOT/cache/sageattention-2.2.0+cu130torch2.11-cp312.whl"
+SAGE_WHEEL="$ROOT/cache/sageattention-2.2.0+cu130torch2.11-cp312-cp312-manylinux_2_34_x86_64.manylinux_2_35_x86_64.whl"
 SAGE_URL="https://github.com/Comfy-Org/wheels/releases/download/sageattention-latest/sageattention-2.2.0%2Bcu130torch2.11-cp312-cp312-manylinux_2_34_x86_64.manylinux_2_35_x86_64.whl"
 SAGE_SHA256="988a5b510078dfef67fa0ca517321afb659a62a3ace12d7f52f3b831d2ddb58f"
 rm -rf "$SAGE_TARGET"
