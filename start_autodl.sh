@@ -2,7 +2,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
-source .venv/bin/activate
+PY="$ROOT/.venv/bin/python"
+if [[ ! -x "$PY" ]]; then
+  echo "ERROR: Linux runtime is not installed. Run bash install_autodl.sh first." >&2
+  exit 1
+fi
 export H3_PACKAGE_ROOT="$ROOT"
 export H3_HOST="${H3_HOST:-0.0.0.0}"
 export H3_PORT="${H3_PORT:-6006}"
@@ -16,4 +20,4 @@ export TRANSFORMERS_CACHE="$ROOT/cache/transformers"
 export TRITON_HOME="$ROOT/cache/triton_home"
 export TRITON_CACHE_DIR="$ROOT/cache/triton"
 mkdir -p input output temp cache models
-exec python app/server.py
+exec "$PY" app/server.py

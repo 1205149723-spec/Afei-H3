@@ -4,7 +4,7 @@ Linux/AutoDL publication of the HailuoH3 8775 local video generator.
 
 ## Runtime target
 
-- Ubuntu 24.04 / x86_64
+- Ubuntu Linux / x86_64 (the saved AutoDL image is the authoritative runtime)
 - NVIDIA GPU + compatible driver
 - Python 3.12
 - PyTorch 2.11.0 + CUDA 13.0
@@ -13,10 +13,10 @@ Linux/AutoDL publication of the HailuoH3 8775 local video generator.
 ## Quick start on AutoDL
 
 ```bash
-git clone https://github.com/1205149723-spec/HailuoH3-8775-AutoDL.git
-cd HailuoH3-8775-AutoDL
+git clone https://github.com/1205149723-spec/Afei-H3.git
+cd Afei-H3
 bash install_autodl.sh
-# Put/symlink the required model files under ./models first.
+./.venv/bin/python scripts/prepare_models.py --mode all
 bash start_autodl.sh
 ```
 
@@ -36,7 +36,7 @@ Core H3 T2V/I2V/first-last/R2V generation is the Linux target. The Windows-only 
 
 ## Models
 
-Large model weights are not committed to Git. See `models/README.md`.
+Large model weights are not committed to Git or baked into the saved environment image. `scripts/prepare_models.py` first reuses AutoDL shared-model mounts (`/.autodl-model/data` and `/.autodl`) and only downloads missing files into external model storage before symlinking them under `models/`. Use `--mode t2v` for the minimal T2V validation set or `--mode all` for every supported mode.
 
 ## AutoDL publishing
 
