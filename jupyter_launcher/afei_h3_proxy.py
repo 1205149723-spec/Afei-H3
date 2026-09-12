@@ -14,5 +14,5 @@ def setup_afei_h3() -> dict:
             "title": "阿飞 H3 工作台",
             "category": "Other",
         },
-        "new_browser_tab": True,
+        "new_browser_tab": False,
     }
