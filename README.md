@@ -12,15 +12,9 @@ Linux/AutoDL publication of the HailuoH3 8775 local video generator.
 
 ## Quick start on AutoDL
 
-```bash
-git clone https://github.com/1205149723-spec/Afei-H3.git
-cd Afei-H3
-bash install_autodl.sh
-./.venv/bin/python scripts/prepare_models.py --mode all
-bash start_autodl.sh
-```
+For the published image: create an instance from the Afei-H3 image, wait for startup, then open AutoDL Custom Service port `6006`. No Git clone, environment install, or model download is required for end users.
 
-The service listens on `0.0.0.0:6006` by default.
+The service listens on `0.0.0.0:6006` by default. `/root/start.sh` is the one-command fallback launcher.
 
 ## NVIDIA compatibility
 
@@ -36,8 +30,8 @@ Core H3 T2V/I2V/first-last/R2V generation is the Linux target. The Windows-only 
 
 ## Models
 
-Large model weights are not committed to Git or baked into the saved environment image. `scripts/prepare_models.py` first reuses AutoDL shared-model mounts (`/.autodl-model/data` and `/.autodl`) and only downloads missing files into external model storage before symlinking them under `models/`. Use `--mode t2v` for the minimal T2V validation set or `--mode all` for every supported mode.
+Large model weights are not committed to Git. The final published AutoDL image must contain the complete validated model set under `/root/Afei-H3/models`, so end users never need to download or prepare models.
 
 ## AutoDL publishing
 
-AutoDL Art uses a GitHub code repository together with a saved AutoDL image/runtime. Model weights should be attached separately through AutoDL public models rather than committed to this repository.
+AutoDL Art uses this GitHub code repository together with a saved AutoDL image/runtime. The release image is self-contained: runtime dependencies and the complete model set are baked into the image so users can open port 6006 and generate immediately.
