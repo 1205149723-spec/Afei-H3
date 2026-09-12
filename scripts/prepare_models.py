@@ -28,6 +28,7 @@ SPECS = {
         "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
         "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors?download=true",
         15_687_142_551,
+        "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6",
         shared_repo="Comfy-Org/MiniMax-H3",
     ),
     "video_vae": ModelSpec(
@@ -47,7 +48,8 @@ SPECS = {
     "fl2va": ModelSpec(
         "minimax_h3_fl2va_pruned_w4a8_mixed.safetensors",
         "https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors?download=true",
-        sha256="01aa7b92c007c599890461c325f9b7e3c96fb06c36f242f95b62f7f20e538dec",
+        12_540_858_008,
+        "01aa7b92c007c599890461c325f9b7e3c96fb06c36f242f95b62f7f20e538dec",
     ),
     "ref2va": ModelSpec(
         "minimax_h3_ref2va_pruned_w4a8_mixed.safetensors",
