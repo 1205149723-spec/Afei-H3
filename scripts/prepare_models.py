@@ -150,6 +150,7 @@ def download(spec: ModelSpec, target: Path) -> None:
 def ensure_link(key: str, spec: ModelSpec, store: Path, *, source: str) -> None:
     link = MODEL_DIR / spec.relative
     shared_hash = os.environ.get("H3_VERIFY_SHARED_SHA256", "0") == "1"
+    replaceable_stale_symlink = False
     if link.is_symlink() or link.exists():
         try:
             resolved = link.resolve(strict=True)
@@ -157,12 +158,14 @@ def ensure_link(key: str, spec: ModelSpec, store: Path, *, source: str) -> None:
                 if source != "shared-only" or is_shared_path(resolved):
                     print(f"OK existing: {spec.relative} -> {resolved}")
                     return
+                replaceable_stale_symlink = link.is_symlink()
         except OSError:
-            pass
-        raise RuntimeError(
-            f"model target already exists but is not valid for source={source}: {link}; "
-            "it was left untouched"
-        )
+            replaceable_stale_symlink = link.is_symlink()
+        if not replaceable_stale_symlink:
+            raise RuntimeError(
+                f"model target already exists but is not valid for source={source}: {link}; "
+                "it was left untouched"
+            )
 
     if source in {"auto", "shared-only"}:
         seen: set[Path] = set()
@@ -179,6 +182,9 @@ def ensure_link(key: str, spec: ModelSpec, store: Path, *, source: str) -> None:
                 continue
             if valid(resolved, spec, verify_hash=shared_hash):
                 link.parent.mkdir(parents=True, exist_ok=True)
+                if link.is_symlink():
+                    # Replace only the link itself. Never remove the old model payload.
+                    link.unlink()
                 link.symlink_to(resolved)
                 print(f"OK shared: {spec.relative} -> {resolved}")
                 return
