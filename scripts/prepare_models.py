@@ -134,6 +134,9 @@ def shared_candidates(spec: ModelSpec):
                     if candidate.is_file():
                         yield candidate
                 yield from prefix.rglob(filename)
+    hashed_root = Path("/.autodl")
+    if hashed_root.exists():
+        yield from hashed_root.rglob(filename)
 
 
 def download(spec: ModelSpec, target: Path) -> None:

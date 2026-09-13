@@ -19,7 +19,7 @@
 | ref2va | `minimax_h3_ref2va_pruned_w4a8_mixed.safetensors` | `Kijai/MiniMax-H3-experimental` | public/shared availability not yet proven |
 | upscaler | `minimax_h3_latent_upscaler_3d_fp16.safetensors` | `LBH-123-AI/Minimax_h3_latent_Upscaler` | public/shared availability not yet proven |
 
-`autodl-public-models.json` contains repository-style candidates. When AutoDL's public-model page returns a hashed `instance_path` such as `/.autodl/<hash>`, add that exact path to the corresponding list; the resolver accepts both forms.
+`autodl-public-models.json` contains repository-style candidates. Market startup also scans the application-mounted `/.autodl` tree by exact filename, so a hashed `instance_path` does not need to be known in advance as long as the correct public model file is associated with the application version.
 
 ## AutoDL public-model search evidence
 
@@ -31,7 +31,7 @@ with fields `page_index`, `page_size`, `file_name`, and `model_repository`, and 
 
 ## Publication gates
 
-1. In a logged-in AutoDL Art public-model search, search the six exact filenames and copy their returned `instance_path` values into `autodl-public-models.json` where repository-style resolution is insufficient.
+1. In the AutoDL Art application creator, associate the six exact required model files with the application version. The runtime resolves either repository-style mounts or hashed `/.autodl` mounts automatically.
 2. On the AutoDL release instance, update `/root/Afei-H3` to this revision and run `python scripts/prepare_models.py --mode all --source shared-only`.
 3. Run `python scripts/verify_market_release.py`; all six models must be symlinks resolving under `/.autodl*` and size checks must pass.
 4. Start with `bash /root/start.sh`, verify `/api/health` on port `6006`, then perform one real H3 generation from a clean cloned instance with no model download.
