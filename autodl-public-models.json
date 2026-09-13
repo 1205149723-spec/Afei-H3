@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "models": {
+    "text": [
+      "/.autodl-model/data/Comfy-Org/MiniMax-H3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+    ],
+    "video_vae": [
+      "/.autodl-model/data/Comfy-Org/MiniMax-H3/vae/minimax_h3_video_vae_fp16.safetensors"
+    ],
+    "audio_vae": [
+      "/.autodl-model/data/Comfy-Org/MiniMax-H3/vae/minimax_h3_audio_vae_fp32.safetensors"
+    ],
+    "fl2va": [
+      "/.autodl-model/data/Kijai/MiniMax-H3-experimental/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors"
+    ],
+    "ref2va": [
+      "/.autodl-model/data/Kijai/MiniMax-H3-experimental/minimax_h3_ref2va_pruned_w4a8_mixed.safetensors"
+    ],
+    "upscaler": [
+      "/.autodl-model/data/LBH-123-AI/Minimax_h3_latent_Upscaler/minimax_h3_latent_upscaler_3d_fp16.safetensors"
+    ]
+  }
+}
